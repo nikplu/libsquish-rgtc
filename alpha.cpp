@@ -99,7 +99,7 @@ static void FixRange( int& min, int& max, int steps )
         min = std::max( 0, max - steps );
 }
 
-static int FitCodes( u8 const* rgba, int mask, u8 const* codes, u8* indices )
+static int FitCodes( u8 const* rgba, int mask, u8 const* codes, u8* indices, int subpixel )
 {
     // fit each alpha value to the codebook
     int err = 0;
@@ -115,7 +115,7 @@ static int FitCodes( u8 const* rgba, int mask, u8 const* codes, u8* indices )
         }
 
         // find the least error and corresponding index
-        int value = rgba[4*i + 3];
+        int value = rgba[4*i + subpixel];
         int least = INT_MAX;
         int index = 0;
         for( int j = 0; j < 8; ++j )
@@ -229,8 +229,11 @@ static void WriteAlphaBlock7( int alpha0, int alpha1, u8 const* indices, void* b
     }
 }
 
-void CompressAlphaDxt5( u8 const* rgba, int mask, void* block )
+void CompressAlphaDxt5( u8 const* rgba, int mask, void* block, int subpixel )
 {
+	if( subpixel < 0 ) subpixel = 0;
+	if( subpixel > 3 ) subpixel = 3;
+
     // get the range for 5-alpha and 7-alpha interpolation
     int min5 = 255;
     int max5 = 0;
@@ -244,7 +247,7 @@ void CompressAlphaDxt5( u8 const* rgba, int mask, void* block )
             continue;
 
         // incorporate into the min/max
-        int value = rgba[4*i + 3];
+        int value = rgba[4*i + subpixel];
         if( value < min7 )
             min7 = value;
         if( value > max7 )
@@ -284,8 +287,8 @@ void CompressAlphaDxt5( u8 const* rgba, int mask, void* block )
     // fit the data to both code books
     u8 indices5[16];
     u8 indices7[16];
-    int err5 = FitCodes( rgba, mask, codes5, indices5 );
-    int err7 = FitCodes( rgba, mask, codes7, indices7 );
+    int err5 = FitCodes( rgba, mask, codes5, indices5, subpixel );
+    int err7 = FitCodes( rgba, mask, codes7, indices7, subpixel );
 
     // save the block with least error
     if( err5 <= err7 )
@@ -294,7 +297,7 @@ void CompressAlphaDxt5( u8 const* rgba, int mask, void* block )
         WriteAlphaBlock7( min7, max7, indices7, block );
 }
 
-void DecompressAlphaDxt5( u8* rgba, void const* block )
+void DecompressAlphaDxt5( u8* rgba, void const* block, int subpixel )
 {
     // get the two alpha values
     u8 const* bytes = reinterpret_cast< u8 const* >( block );
@@ -344,7 +347,7 @@ void DecompressAlphaDxt5( u8* rgba, void const* block )
 
     // write out the indexed codebook values
     for( int i = 0; i < 16; ++i )
-        rgba[4*i + 3] = codes[indices[i]];
+        rgba[4*i + subpixel] = codes[indices[i]];
 }
 
 } // namespace squish

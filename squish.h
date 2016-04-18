@@ -60,6 +60,18 @@ enum
     kWeightColourByAlpha = ( 1 << 7 )
 };
 
+enum RGTCVariant
+{
+	//! Red-only RGTC (RGTC1). One 64-bit block (coded using the same encoding as DXT5 alpha) consisting only of red subpixels.
+	kRgtc1 = 0,
+	
+	//! RG RGTC (RGTC2). Two 64-bit blocks (coded using the same encoding as DXT5 alpha) glued together.
+	//! The first block represents the red subpixels, the second block represents the green subpixels.
+	kRgtc2,
+
+	kRgtcVariantMax
+};
+
 // -----------------------------------------------------------------------------
 
 /*! @brief Compresses a 4x4 block of pixels.
@@ -256,6 +268,14 @@ void CompressImage( u8 const* rgba, int width, int height, void* blocks, int fla
 void DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags );
 
 // -----------------------------------------------------------------------------
+
+/*! @brief Compresses an image in memory to RGTC. */
+void CompressImageRGTC( u8 const* rgba, int width, int height, void* blocks, RGTCVariant variant );
+
+// -----------------------------------------------------------------------------
+
+/*! @brief Decompresses an image in memory from RGTC. */
+void DecompressImageRGTC( u8* rgba, int width, int height, void const* blocks, RGTCVariant variant );
 
 } // namespace squish
 

@@ -227,4 +227,115 @@ void DecompressImage( u8* rgba, int width, int height, void const* blocks, int f
     }
 }
 
+void CompressImageRGTC( u8 const* rgba, int width, int height, void* blocks, RGTCVariant variant )
+{
+    // initialise the block output
+    u8* targetBlock = reinterpret_cast< u8* >( blocks );
+    int bytesPerBlock = ( variant == kRgtc1 ) ? 8 : 16;
+
+    // loop over blocks
+    for( int y = 0; y < height; y += 4 )
+    {
+        for( int x = 0; x < width; x += 4 )
+        {
+            // build the 4x4 block of pixels
+            u8 sourceRgba[16*4];
+            u8* targetPixel = sourceRgba;
+            int mask = 0;
+            for( int py = 0; py < 4; ++py )
+            {
+                for( int px = 0; px < 4; ++px )
+                {
+                    // get the source pixel in the image
+                    int sx = x + px;
+                    int sy = y + py;
+
+                    // enable if we're in the image
+                    if( sx < width && sy < height )
+                    {
+                        // copy the rgba value
+                        u8 const* sourcePixel = rgba + 4*( width*sy + sx );
+                        for( int i = 0; i < 4; ++i )
+                            *targetPixel++ = *sourcePixel++;
+
+                        // enable this pixel
+                        mask |= ( 1 << ( 4*py + px ) );
+                    }
+                    else
+                    {
+                        // skip this pixel as its outside the image
+                        targetPixel += 4;
+                    }
+                }
+            }
+
+            // compress the alpha channel into the output using DXT5 alpha compression
+			CompressAlphaDxt5( sourceRgba, mask, targetBlock, 0 /* red */ );
+			
+			if( variant == kRgtc2 )
+			{
+				// also compress the green channel independently
+				CompressAlphaDxt5( sourceRgba, mask, targetBlock + 8, 1 /* green */ );
+			}
+
+            // advance
+            targetBlock += bytesPerBlock;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+/*! @brief Decompresses an image in memory from RGTC. */
+void DecompressImageRGTC( u8* rgba, int width, int height, void const* blocks, RGTCVariant variant )
+{
+    // initialise the block input
+    u8 const* sourceBlock = reinterpret_cast< u8 const* >( blocks );
+    int bytesPerBlock = ( variant == kRgtc1 ) ? 8 : 16;
+
+    // loop over blocks
+    for( int y = 0; y < height; y += 4 )
+    {
+        for( int x = 0; x < width; x += 4 )
+        {
+            // decompress the block containing the green colour values
+            u8 targetRgba[4*16];
+			DecompressAlphaDxt5( targetRgba, sourceBlock, 0 /* red */ );
+
+			if( variant == kRgtc2 )
+			{
+				DecompressAlphaDxt5( targetRgba, sourceBlock + 8, 1 /* green */ );
+			}
+
+            // write the decompressed pixels to the correct image locations
+            u8 const* sourcePixel = targetRgba;
+            for( int py = 0; py < 4; ++py )
+            {
+                for( int px = 0; px < 4; ++px )
+                {
+                    // get the target location
+                    int sx = x + px;
+                    int sy = y + py;
+                    if( sx < width && sy < height )
+                    {
+                        u8* targetPixel = rgba + 4*( width*sy + sx );
+
+                        // copy the rgba value
+                        for( int i = 0; i < 4; ++i )
+                            *targetPixel++ = *sourcePixel++;
+                    }
+                    else
+                    {
+                        // skip this pixel as its outside the image
+                        sourcePixel += 4;
+                    }
+                }
+            }
+
+            // advance
+            sourceBlock += bytesPerBlock;
+        }
+    }
+}
+
 } // namespace squish
