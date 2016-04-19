@@ -231,7 +231,7 @@ void CompressImageRGTC( u8 const* rgba, int width, int height, void* blocks, RGT
 {
     // initialise the block output
     u8* targetBlock = reinterpret_cast< u8* >( blocks );
-    int bytesPerBlock = ( variant == kRgtc1 ) ? 8 : 16;
+    int bytesPerBlock = ( (variant == kRgtc1) || (variant == kLatc1) ) ? 8 : 16;
 
     // loop over blocks
     for( int y = 0; y < height; y += 4 )
@@ -269,13 +269,17 @@ void CompressImageRGTC( u8 const* rgba, int width, int height, void* blocks, RGT
                 }
             }
 
-            // compress the alpha channel into the output using DXT5 alpha compression
+            // compress the red channel into the output using DXT5 alpha compression
 			CompressAlphaDxt5( sourceRgba, mask, targetBlock, 0 /* red */ );
 			
 			if( variant == kRgtc2 )
 			{
 				// also compress the green channel independently
 				CompressAlphaDxt5( sourceRgba, mask, targetBlock + 8, 1 /* green */ );
+			}
+			else if( variant == kLatc2 )
+			{
+				CompressAlphaDxt5( sourceRgba, mask, targetBlock + 8, 3 /* alpha */);
 			}
 
             // advance
@@ -291,20 +295,24 @@ void DecompressImageRGTC( u8* rgba, int width, int height, void const* blocks, R
 {
     // initialise the block input
     u8 const* sourceBlock = reinterpret_cast< u8 const* >( blocks );
-    int bytesPerBlock = ( variant == kRgtc1 ) ? 8 : 16;
+    int bytesPerBlock = ( (variant == kRgtc1) || (variant == kLatc1) ) ? 8 : 16;
 
     // loop over blocks
     for( int y = 0; y < height; y += 4 )
     {
         for( int x = 0; x < width; x += 4 )
         {
-            // decompress the block containing the green colour values
+            // decompress the block containing the red colour values
             u8 targetRgba[4*16];
 			DecompressAlphaDxt5( targetRgba, sourceBlock, 0 /* red */ );
 
 			if( variant == kRgtc2 )
 			{
 				DecompressAlphaDxt5( targetRgba, sourceBlock + 8, 1 /* green */ );
+			}
+			else if( variant == kLatc2 )
+			{
+				DecompressAlphaDxt5( targetRgba, sourceBlock + 8, 3 /* alpha */ );
 			}
 
             // write the decompressed pixels to the correct image locations

@@ -65,9 +65,17 @@ enum RGTCVariant
 	//! Red-only RGTC (RGTC1). One 64-bit block (coded using the same encoding as DXT5 alpha) consisting only of red subpixels.
 	kRgtc1 = 0,
 	
-	//! RG RGTC (RGTC2). Two 64-bit blocks (coded using the same encoding as DXT5 alpha) glued together.
+	//! Red/green RGTC (RGTC2). Two 64-bit blocks (coded using the same encoding as DXT5 alpha) glued together.
 	//! The first block represents the red subpixels, the second block represents the green subpixels.
 	kRgtc2,
+
+	//! Luminance-only LATC (LATC1). One 64-bit block (coded using the same encoding as DXT5 alpha) consisting of subpixels describing the luminance.
+	//! When encoding, only the red channel is taken as input. Similarly for the output.
+	kLatc1,
+
+	//! Luminance/alpha LATC (LATC2). Two 64-bit blocks (coded using the same encoding as DXT5 alpha) glued together. The first describes the luminance,
+	//! the second contains the alpha values.
+	kLatc2,
 
 	kRgtcVariantMax
 };
